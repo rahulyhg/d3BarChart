@@ -8,12 +8,12 @@ var barChart = function() {
 		width       = 500 - margins.l - margins.r, 
 		height      = 350 - margins.t - margins.b,
 		s           = {
-			x: d3.scale.linear().range( [ 0, width  ] ),
-			y: d3.scale.linear().range( [ height + margins.t , 0 + margins.b ] )
+			x: d3.scale.linear().range( [ 0, width   ] ),
+			y: d3.scale.linear().range( [ height , 0 ] )
 		},
 		axes        = {
-			x: d3.svg.axis().orient( 'bottom' ).tickSize( -height ).scale( s.x ),
-			y: d3.svg.axis().orient( 'left'   ).tickSize( -width  ).scale( s.y )
+			x: d3.svg.axis().orient( 'top'  ).tickSize( -height ).scale( s.x ),
+			y: d3.svg.axis().orient( 'left' ).tickSize( -width  ).scale( s.y )
 		},
 		title       = 'Title',
 		orientation = 'horizontal',
@@ -31,12 +31,11 @@ var barChart = function() {
 		
 		// for each bar
 		g.each( function( d, i ) {
-			var bar, barwidth;
+			var bar, barwidth, text;
 			
 			barwidth = 'horizontal' == orientation ? ( height - ( d.length - 1 ) * barspacing ) / d.length :
 													 ( width  - ( d.length - 1 ) * barspacing ) / d.length ;
 			
-			console.log( d );
 			bar = g.selectAll( 'rect.bar' )
 				.data( d )
 				.enter().append( 'svg:rect' )
@@ -44,6 +43,13 @@ var barChart = function() {
 				.attr( 'y', function( d ) { return s.y( d.index ) - ( 4 - d.index ) * barwidth / 4; } )
 				.attr( 'width', function( d ) { return s.x( d.hours ); } )
 				.attr( 'height', barwidth );
+			
+			text = g.selectAll( 'text.label' )
+				.data( d )
+				.enter().append( 'svg:text' )
+				.attr( 'x', 6 )
+				.attr( 'y', function( d ) { return s.y( d.index ); } )
+				.text( function ( d ) { return d.person } );
 		});
 	};
 	
