@@ -3,54 +3,39 @@
  */
 
 // create our chart object
-var chart = barChart().title( 'Hours Spent' ), svg;
+var chart = barChart()
+			.appendTo( 'body' )				// element to which the chart should be added
+			.title( 'Hours Spent' )			// chart title
+			.valueCol( 'hours' )			// column name with values from which to make bars
+			.labelCol( 'person' )			// column name with values from which to make labels
+			.colorScheme( 'RdYlBu' )		// set the color scheme, see colorbrewer
+			.orientation( 'horizontal' );
 
 // load the data
 d3.csv( 'js/data.csv', function( data ) {
-	var labels = [];
+
 	// loop through each row of the data
 	data.forEach( function( row, i ) {
-		// make sure that the value is numeric
-		row.hours = +row.hours;
+		// store the index
 		row.index = i;
-		labels.push( row.person );
+		// make sure the values are numeric
+		row[ chart.valueCol() ] = +row[ chart.valueCol() ];
+		// store the labels in an array
+		chart.labels().push( row[ chart.labelCol() ] );
 	});
 
-	// set the domains
-	if ( 'horizontal' == chart.orientation() ) {
-		chart.scales().x.domain( [ 0, d3.max( data, function( d ) { return d.hours; } ) ] );
-		chart.scales().y.domain( [ 0, data.length - 1 ] );
-	} else {
-		chart.scales().x.domain( [ 0, data.length - 1 ] );
-		chart.scales().y.domain( [ 0, d3.max( data, function( d ) { return d.hours; } ) ] );
-	}
-	
-	// set labels for the y axis
-	//chart.axes().y.tickFormat( function( d ) { return data[ ~~d ].person; } );
-	
-	// add the chart to the page
-	svg = d3.select( 'body' )
+	// create the svg
+	d3.select( chart.appendTo() )
 		.append( 'div' )
 		.attr( 'id', 'chart' )
 		.selectAll( 'svg' )
 		.data( [ data ] )
 		.enter().append( 'svg' )
-		.attr( 'width',  chart.width()  + chart.margins().l + chart.margins().r )
-		.attr( 'height', chart.height() + chart.margins().t + chart.margins().b )
+		.attr( 'width',  chart.width()  )
+		.attr( 'height', chart.height() )
+		.attr( 'class', chart.colorScheme() )
 		.append( 'g' )
-		.attr( 'transform', 'translate(' + chart.margins().l + ',' + chart.margins().t + ')' )
+		.attr( 'id', 'bar1' )
+		.attr( 'transform', 'translate(' + chart.origin() + ')' )
 		.call( chart );
-	//svg.insert( 'text' )
-	//	.text( function( d, i ) { console.log( i ); return d[ i ].person; } );
-	
-	// get the width of the longest label
-	
-	
-	// add labels
-	
-	//svg.append( 'g' ).call( chart.axes().y );
-	console.log( d3.selectAll( 'text' ).node().getComputedTextLength() );
-	var labels = d3.selectAll( 'text' );
-	console.log( labels );
-	for ( i = 0; i < labels[ 0 ].length; i++ ) console.log( labels[ 0 ][ i ].getComputedTextLength() );
 });

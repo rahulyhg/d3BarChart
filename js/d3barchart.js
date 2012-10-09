@@ -4,21 +4,27 @@
 var barChart = function() {
 	// variable declarations and default values
 	var chart,
+		appendTo    = 'body',
+		orientation = 'horizontal',
+		valueCol    = 'values',
+		labelCol    = 'labels',
+		labels      = [],
+		padding     = .1,
+		categories  = 5,
+		title       = '',
+		colorScheme = 'Blues',
 		margins     = { t: 20, r: 20, b: 20, l: 20 },
-		width       = 500 - margins.l - margins.r, 
-		height      = 350 - margins.t - margins.b,
+		width       = 400 - margins.l - margins.r, 
+		height      = 250 - margins.t - margins.b,
 		s           = {
-			x: d3.scale.linear().range( [ 0, width   ] ),
-			y: d3.scale.linear().range( [ height , 0 ] )
+			value: d3.scale.linear().range( [ 0, 'horizontal' == orientation ? width : height ] ),
+			label: d3.scale.ordinal().rangeBands( [ 0, 'horizontal' == orientation ? height : width ], padding ),
+			color: d3.scale.quantize().domain( [ 1, categories ] ).range( d3.range( categories ) )
 		},
 		axes        = {
-			x: d3.svg.axis().orient( 'top'  ).tickSize( -height ).scale( s.x ),
-			y: d3.svg.axis().orient( 'left' ).tickSize( -width  ).scale( s.y )
-		},
-		title       = 'Title',
-		orientation = 'horizontal',
-		barspacing  = 10,
-		drawGrid;
+			x: d3.svg.axis().orient( 'top'  ).scale( 'horizontal' == orientation ? s.value : s.label ),
+			y: d3.svg.axis().orient( 'left' ).scale( 'horizontal' == orientation ? s.label : s.value )
+		};
 
 	/**
 	 * Chart definition
@@ -26,43 +32,80 @@ var barChart = function() {
 	 * @param g object An array of svg:g elements each referring to a bar in the chart
 	 */
 	chart = function( g ) {
-		//g.call( axes.x );
-		//g.call( axes.y );
 		
-		// for each bar
+		var th = 0;
+		
+		// draw the title
+		if ( '' != title ) {
+			th = d3.select( 'svg' ).insert( 'svg:text' )
+				.attr( 'x', width / 2 + margins.l )
+				.attr( 'y', margins.t )
+				.attr( 'dy', '1em' )
+				.attr( 'text-anchor', 'middle' )
+				.attr( 'class', 'title' )
+				.text( title );
+			// adjust layout for title
+			th = th[ 0 ][ 0 ].clientHeight;
+			margins.t += th;
+			height -= th;
+			g.attr( 'transform', 'translate(' + margins.l + ',' + margins.t + ')' );
+			if ( 'horizontal' == orientation ) s.label.rangeBands( [ 0, height ], padding );
+			else s.value.range( [ 0, height ] );
+		}
+
+		s.label.domain( chart.labels() );
+		g.call( axes.y );
+		
+		// adjust the left margin for label axis
+		if ( 'horizontal' == orientation ) {
+			var maxw = 0, labs = d3.selectAll( '#bar1 g text' );
+			labs[ 0 ].forEach( function( lab ) {
+				maxw = ( lab.clientWidth > maxw ) ? lab.clientWidth : maxw;
+			});
+			margins.l += maxw;
+			width -= maxw;
+			g.attr( 'transform', 'translate(' + margins.l + ',' + margins.t + ')' );
+			s.value.range( [ 0, width ] );
+			//d3.selectAll( 'rect.bar' ).attr( 'width', function( d ) { return s.value( d[ valueCol ] ); } );
+		}
+		// draw the bars
 		g.each( function( d, i ) {
-			var bar, barwidth, text;
-			
-			barwidth = 'horizontal' == orientation ? ( height - ( d.length - 1 ) * barspacing ) / d.length :
-													 ( width  - ( d.length - 1 ) * barspacing ) / d.length ;
-			
-			bar = g.selectAll( 'rect.bar' )
+			// set the domains
+			s.value.domain( [ 0, d3.max( d, function( d ) { return d[ valueCol ]; } ) ] );
+
+			var bar = g.selectAll( 'rect.bar' )
 				.data( d )
 				.enter().append( 'svg:rect' )
-				.attr( 'x', 0 )
-				.attr( 'y', function( d ) { return s.y( d.index ) - ( 4 - d.index ) * barwidth / 4; } )
-				.attr( 'width', function( d ) { return s.x( d.hours ); } )
-				.attr( 'height', barwidth );
-			
-			text = g.selectAll( 'text.label' )
+				.attr( 'x', 'horizontal' == orientation ? 0 : function( d ) { return s.label( d[ labelCol ] ); } )
+				.attr( 'y', 'horizontal' == orientation ? function( d ) { return s.label( d[ labelCol ] ); } : 0 )
+				.attr( 'width',  'horizontal' == orientation ? function( d ) { return s.value( d[ valueCol ] ); } : s.label.rangeBand() )
+				.attr( 'height', 'horizontal' == orientation ? s.label.rangeBand() : function( d ) { return s.value( d[ valueCol ] ); } )
+				.attr( 'class', function( d ) { return 'q' + d.index + '-' + categories; } );
+			g.selectAll( 'text.valueLabel' )
 				.data( d )
 				.enter().append( 'svg:text' )
-				.attr( 'x', 6 )
-				.attr( 'y', function( d ) { return s.y( d.index ); } )
-				.text( function ( d ) { return d.person } );
+				.attr( 'class', 'valueLabel' )
+				.attr( 'text-anchor', 'end' )
+				.attr( 'x', 'horizontal' == orientation ? function( d ) { return s.value( d[ valueCol ] ); } : s.label.rangeBand() )
+				.attr( 'y', 'horizontal' == orientation ? function( d ) { return s.label( d[ labelCol ] ); } : s.label.rangeBand() )
+				.attr( 'dx', -6 )
+				.attr( 'dy', s.label.rangeBand() / 2  )
+				.text( function( d ) { return d[ valueCol ]; } );
 		});
-	};
-	
-	/**
-	 * Draw the grid upon which bar charts will be drawn
-	 */
-	drawGrid = function() {
 		
+		// draw the axes
+		//g.call( axes.x );
 	};
 	
 	/**
 	 * Getters/Setters
 	 */
+	chart.appendTo = function( el ) {
+		if ( ! arguments.length ) return appendTo;
+		appendTo = el;
+		return chart;
+	};
+
 	chart.domain = function( d ) {
 		if ( ! arguments.length ) return domain;
 		domain = d == null ? d : d3.functor( d );
@@ -75,18 +118,28 @@ var barChart = function() {
 		return chart;
 	};
 	
+	chart.padding = function( p ) {
+		if ( ! arguments.length ) return padding;
+		padding = p;
+		return chart;
+	};
+	
+	chart.origin = function() {
+		return margins.l + ',' + margins.t;
+	};
+	
 	chart.width = function( w ) {
-		if ( ! arguments.length ) return width;
+		if ( ! arguments.length ) return width + margins.l + margins.r;
 		width = w;
 		return chart;
 	};
 	
 	chart.height = function( h ) {
-		if ( ! arguments.length ) return height;
+		if ( ! arguments.length ) return height + margins.t + margins.b;
 		height = h;
 		return chart;
 	};
-	
+		
 	chart.title = function( t ) {
 		if ( ! arguments.length ) return title;
 		title = t;
@@ -108,6 +161,30 @@ var barChart = function() {
 	chart.axes = function( a ) {
 		if ( ! arguments.length ) return axes;
 		axes = a;
+		return chart;
+	};
+	
+	chart.valueCol = function( v ) {
+		if ( ! arguments.length ) return valueCol;
+		valueCol = v;
+		return chart;
+	};
+	
+	chart.labelCol = function( l ) {
+		if ( ! arguments.length ) return labelCol;
+		labelCol = l;
+		return chart;
+	};
+	
+	chart.labels = function( l ) {
+		if ( ! arguments.length ) return labels;
+		labels = l;
+		return chart;
+	};
+	
+	chart.colorScheme = function( c ) {
+		if ( ! arguments.length ) return colorScheme;
+		colorScheme = c;
 		return chart;
 	};
 	
