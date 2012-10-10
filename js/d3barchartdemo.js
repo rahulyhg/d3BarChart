@@ -9,7 +9,7 @@ var chart = barChart()
 			.valueCol( 'hours' )			// column name with values from which to make bars
 			.labelCol( 'person' )			// column name with values from which to make labels
 			.colorScheme( 'RdYlBu' )		// set the color scheme, see colorbrewer
-			.orientation( 'horizontal' );
+			.orientation( 'vertical' );
 
 // load the data
 d3.csv( 'js/data.csv', function( data ) {
