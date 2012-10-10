@@ -1,9 +1,11 @@
 /**
-* Code library for adding bar charts to pages
+* Class for adding bar charts to pages
 */
 var barChart = function() {
 	// variable declarations and default values
 	var chart,
+		id          = 'barChart',
+		dataFile    = null,
 		appendTo    = 'body',
 		orientation = 'horizontal',
 		valueCol    = 'values',
@@ -17,13 +19,13 @@ var barChart = function() {
 		width       = 500 - margins.l - margins.r, 
 		height      = 250 - margins.t - margins.b,
 		s           = {
-			value: d3.scale.linear().range( [ 0, 'horizontal' == orientation ? width : height ] ),
-			label: d3.scale.ordinal().rangeBands( [ 0, 'horizontal' == orientation ? height : width ], padding ),
+			value: d3.scale.linear().range( [ 0, width ] ),
+			label: d3.scale.ordinal().rangeBands( [ 0, height ], padding ),
 			color: d3.scale.quantize().domain( [ 1, categories ] ).range( d3.range( categories ) )
 		},
 		axes        = {
-			x: d3.svg.axis().orient( 'top'  ).scale( 'horizontal' == orientation ? s.value : s.label ),
-			y: d3.svg.axis().orient( 'left' ).scale( 'horizontal' == orientation ? s.label : s.value )
+			x: d3.svg.axis().orient( 'top'  ).scale( s.value ),
+			y: d3.svg.axis().orient( 'left' ).scale( s.label )
 		};
 
 	/**
@@ -33,11 +35,11 @@ var barChart = function() {
 	 */
 	chart = function( g ) {
 		
-		var th = 0;
+		var th = max = 0, labs, horiz = 'horizontal' == orientation;
 		
 		// draw the title
 		if ( '' != title ) {
-			th = d3.select( 'svg' ).insert( 'svg:text' )
+			th = d3.select( '#' + id + ' svg' ).insert( 'svg:text' )
 				.attr( 'x', width / 2 + margins.l )
 				.attr( 'y', margins.t )
 				.attr( 'dy', '1em' )
@@ -45,101 +47,134 @@ var barChart = function() {
 				.attr( 'class', 'title' )
 				.text( title );
 			// adjust layout for title
-			th = th[ 0 ][ 0 ].clientHeight;
+			th = th[ 0 ][ 0 ].getBBox().height;
 			margins.t += th;
 			height -= th;
 			g.attr( 'transform', 'translate(' + margins.l + ',' + margins.t + ')' );
-			if ( 'horizontal' == orientation ) s.label.rangeBands( [ 0, height ], padding );
-			else s.value.range( [ 0, height ] );
+			if ( horiz ) s.label.rangeBands( [ 0, height ], padding );
+			else s.value.range( [ height, 0 ] );
 		}
 		
-		// set the format for the numeric axis
-		if ( 'horizontal' == orientation ) axes.x.tickFormat( d3.format( '.0f' ) );
-		else axes.y.tickFormat( d3.format( '.0f' ) );
-
-		axes.x.orient( 'bottom'  ).scale( 'horizontal' == orientation ? s.value : s.label );
-		axes.y.orient( 'left' ).scale( 'horizontal' == orientation ? s.label : s.value );
-		s.label.domain( chart.labels() );
-		s.value.domain( [ 0, d3.max( g.data()[0], function( d ) { return d[ valueCol ]; } ) ] );
+		axes.x.orient( 'bottom'  ).scale( horiz ? s.value : s.label );
+		axes.y.orient( 'left' ).scale( horiz ? s.label : s.value );
+		s.label.domain( labels );
+		s.value.domain( [ 0, d3.max( g.data()[ 0 ], function( d ) { return d[ valueCol ]; } ) ] );
 		
 		// draw the axes
-		g.append( 'g' ).attr( 'transform', 'translate( 0, ' + height + ')' ).attr( 'id', 'xaxis' ).call( axes.x );
-		g.append( 'g').attr( 'id', 'yaxis' ).call( axes.y );
+		g.append( 'g' ).attr( 'transform', 'translate( 0, ' + height + ')' ).attr( 'class', 'xaxis' ).call( axes.x );
+		g.append( 'g').attr( 'class', 'yaxis' ).call( axes.y );
 
 		// adjust the left margin and width for y axis labels
-		var labs = d3.selectAll( '#yaxis text' ), max = 0;
-		labs[ 0 ].forEach( function( lab ) { max = ( lab.clientWidth > max ) ? lab.clientWidth : max; } );
+		labs = d3.selectAll( '#' + id + ' .yaxis text' );
+		labs[ 0 ].forEach( function( lab ) { max = ( lab.getBBox().width > max ) ? lab.getBBox().width : max; } );
 		margins.l += max;
 		width     -= max;
 		
 		// adjust the bottom margin and height for y axis labels
-		labs = d3.selectAll( '#xaxis text' );
+		labs = d3.selectAll( '#' + id + ' .xaxis text' );
 		max = 0;
-		labs[ 0 ].forEach( function( lab ) { max = ( lab.clientHeight > max ) ? lab.clientHeight : max; } );
+		labs[ 0 ].forEach( function( lab ) { max = ( lab.getBBox().height > max ) ? lab.getBBox().height : max; } );
 		margins.b += max;
 		height    -= max;
 		g.attr( 'transform', 'translate(' + margins.l + ',' + margins.t + ')' );
 
 		// update the scales, axes, and domains
-		s.value.range( [ 0, 'horizontal' == orientation ? width : height ] );
-		s.label.rangeBands( [ 0, 'horizontal' == orientation ? height : width ], padding );
-		axes.x.scale( 'horizontal' == orientation ? s.value : s.label );
-		axes.y.scale( 'horizontal' == orientation ? s.label : s.value );
-		d3.select( '#xaxis' ).attr( 'transform', 'translate( 0, ' + height + ')' ).call( axes.x );
-		d3.select( '#yaxis' ).call( axes.y );
+		if ( 'horizontal' == orientation ) s.value.range( [ 0, width ] );
+		else s.value.range( [ height, 0 ] );
+		s.label.rangeBands( [ 0, horiz ? height : width ], padding );
+		axes.x.scale( horiz ? s.value : s.label );
+		axes.y.scale( horiz ? s.label : s.value );
+
+		// set the format for the numeric axis
+		if ( horiz ) axes.x.tickFormat( d3.format( '.0f' ) ).ticks( d3.max( g.data()[ 0 ], function( d ) { return d[ valueCol ]; } ) ).tickSize( -height, 0 );
+		else axes.y.tickFormat( d3.format( '.0f' ) ).ticks( d3.max( g.data()[ 0 ], function( d ) { return d[ valueCol ]; } ) ).tickSize( -width, 0 );
+
+		// redraw the axes
+		d3.select( '#' + id + ' .xaxis' ).attr( 'transform', 'translate( 0, ' + height + ')' ).call( axes.x );
+		d3.select( '#' + id + ' .yaxis' ).call( axes.y );
 
 		// draw the bars
 		g.each( function( d, i ) {
 
-			var bar = g.selectAll( 'rect.bar' )
+			var bar = g.selectAll( '#' + id + 'rect.bar' )
 				.data( d )
 				.enter().append( 'svg:rect' )
-				.attr( 'x', 'horizontal' == orientation ? 0 : function( d ) { return s.label( d[ labelCol ] ); } )
-				.attr( 'y', 'horizontal' == orientation ? function( d ) { return s.label( d[ labelCol ] ); } : function( d ) { return height - s.value( d[ valueCol ] ); } )
-				.attr( 'width',  'horizontal' == orientation ? function( d ) { return s.value( d[ valueCol ] ); } : s.label.rangeBand() )
-				.attr( 'height', 'horizontal' == orientation ? s.label.rangeBand() : function( d ) { return s.value( d[ valueCol ] ); } )
+				.attr( 'x', horiz ? 0 : function( d ) { return s.label( d[ labelCol ] ); } )
+				.attr( 'y', horiz ? function( d ) { return s.label( d[ labelCol ] ); } : function( d ) { return s.value( d[ valueCol ] ); } )
+				.attr( 'width',  horiz ? function( d ) { return s.value( d[ valueCol ] ); } : s.label.rangeBand() )
+				.attr( 'height', horiz ? s.label.rangeBand() : function( d ) { return height - s.value( d[ valueCol ] ); } )
 				.attr( 'class', function( d ) { return 'q' + d.index + '-' + categories; } );
-			g.selectAll( 'text.valueLabel' )
+			g.selectAll( '#' + id + 'text.valueLabel' )
 				.data( d )
 				.enter().append( 'svg:text' )
 				.attr( 'class', 'valueLabel' )
-				.attr( 'text-anchor', 'end' )
-				.attr( 'x',  'horizontal' == orientation ? function( d ) { return s.value( d[ valueCol ] ); } : function( d ) { return s.label( d[ labelCol ] ); } )
-				.attr( 'y',  'horizontal' == orientation ? function( d ) { return s.label( d[ labelCol ] ); } : function( d ) { return height - s.value( d[ valueCol ] ); } )
-				.attr( 'dx', 'horizontal' == orientation ? -6 : s.label.rangeBand() / 2 )
-				.attr( 'dy', 'horizontal' == orientation ? s.label.rangeBand() / 2 : '1.5em' )
+				.attr( 'style', 'text-anchor:' + ( horiz ? 'end' : 'middle' ) + ';dominant-baseline:central;' )
+				.attr( 'x',  horiz ? function( d ) { return s.value( d[ valueCol ] ) - 6; } : function( d ) { return s.label( d[ labelCol ] ) + s.label.rangeBand() / 2; } )
+				.attr( 'y',  horiz ? function( d ) { return s.label( d[ labelCol ] ) + s.label.rangeBand() / 2; } : function( d ) { return s.value( d[ valueCol ] ); } )
+				.attr( 'dy', horiz ? 0 : '1.5em' )
 				.text( function( d ) { return d[ valueCol ]; } );
 		});
 		
-		
-		
-		if ( 'horizontal' == orientation ) {
-			var maxw = 0, labs = d3.selectAll( '#bar1 g text' );
-			labs[ 0 ].forEach( function( lab ) {
-				maxw = ( lab.clientWidth > maxw ) ? lab.clientWidth : maxw;
-			});
-			margins.l += maxw;
-			width -= maxw;
-			s.value.range( [ 0, width ] );
-		}
+		// redraw the axes
+		g.append( 'g' ).attr( 'transform', 'translate( 0, ' + height + ')' ).attr( 'class', 'xaxis' ).call( axes.x );
+		g.append( 'g').attr( 'class', 'yaxis' ).call( axes.y );
+	};
+	
+	/**
+	 * Load the chart
+	 */
+	chart.load = function() {
+		if ( null != dataFile ) {
+			d3.csv( dataFile, function( data ) {
 
+				// loop through each row of the data
+				data.forEach( function( row, i ) {
+					// store the index
+					row.index = i;
+					// make sure the values are numeric
+					row[ valueCol ] = +row[ valueCol ];
+					// store the labels in an array
+					labels.push( row[ labelCol ] );
+				});
+
+				// create the svg
+				d3.select( appendTo )
+					.append( 'div' )
+					.attr( 'id', id )
+					.selectAll( 'svg' )
+					.data( [ data ] )
+					.enter().append( 'svg' )
+					.attr( 'width',  width  + margins.l + margins.r )
+					.attr( 'height', height + margins.t + margins.b )
+					.attr( 'class', colorScheme )
+					.append( 'g' )
+					.attr( 'transform', 'translate(' + margins.l + ',' + margins.t + ')' )
+					.call( chart );
+			});
+		}
 	};
 	
 	/**
 	 * Getters/Setters
 	 */
+	chart.dataFile = function( df ) {
+		if ( ! arguments.length ) return dataFile;
+		dataFile = df;
+		return chart;
+	};
+
+	chart.id = function( i ) {
+		if ( ! arguments.length ) return id;
+		id = i;
+		return chart;
+	};
+
 	chart.appendTo = function( el ) {
 		if ( ! arguments.length ) return appendTo;
 		appendTo = el;
 		return chart;
 	};
 
-	chart.domain = function( d ) {
-		if ( ! arguments.length ) return domain;
-		domain = d == null ? d : d3.functor( d );
-		return chart;
-	};
-	
 	chart.margins = function( m ) {
 		if ( ! arguments.length ) return margins;
 		margins = m;
@@ -152,19 +187,15 @@ var barChart = function() {
 		return chart;
 	};
 	
-	chart.origin = function() {
-		return margins.l + ',' + margins.t;
-	};
-	
 	chart.width = function( w ) {
 		if ( ! arguments.length ) return width + margins.l + margins.r;
-		width = w;
+		width = w - margins.l - margins.r;
 		return chart;
 	};
 	
 	chart.height = function( h ) {
 		if ( ! arguments.length ) return height + margins.t + margins.b;
-		height = h;
+		height = h - margins.t - margins.b;
 		return chart;
 	};
 		
@@ -219,4 +250,3 @@ var barChart = function() {
 	// finally, return the chart object
 	return chart;
 };
-
