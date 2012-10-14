@@ -12,7 +12,7 @@ jQuery( document ).ready( function ( $ ) {
 				},
 				{
 					title: 'I am a person who prefers to be with other people rather than spending time alone.',
-					values: [ 4, 5, 3, 4.8, 5.4 ]
+					values: [ 4, .2, 3, 4.8, 5.4 ]
 				},
 				{
 					title: 'I am a person who is careful to get the amount of sleep I need most nights.',
@@ -21,6 +21,10 @@ jQuery( document ).ready( function ( $ ) {
 				{
 					title: 'I am a person who believes that having a lot of money will make me happy.',
 					values: [ 4, 5, 3, 4.8, 5.4 ]
+				},
+				{
+					title: 'I like people.',
+					values: [ 6, 5, 0, 0, 0 ]
 				}
 			]
 		},

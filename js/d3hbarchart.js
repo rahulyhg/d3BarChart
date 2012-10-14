@@ -118,9 +118,12 @@ var hbarChart = function () {
 			.attr('class', 'chartNav prev')
 			.text('<<')
 			.on('click', function () {
-				current = (current === 0) ? 0 : current - 1;
-				chart.update();
-				$( '#' + id + ' select' ).val( current );
+				if ( +current !== 0 ) {
+					current = +current;
+					current -= 1;
+					chart.update();
+					$( '#' + id + ' select' ).val( current );
+				}
 				return false;
 			});
 		d3.select('#' + id)
@@ -128,14 +131,18 @@ var hbarChart = function () {
 			.attr('class', 'chartNav next')
 			.text('>>')
 			.on('click', function () {
-				current = (current === data.series.length - 1) ? data.series.length - 1 : current + 1;
-				chart.update();
-				$( '#' + id + ' select' ).val( current );
+				if ( +current !== data.series.length - 1 ) {
+					current = +current;
+					current += 1;
+					chart.update();
+					$( '#' + id + ' select' ).val( current );
+				}
 				return false;
 			});
 		d3.select( '#' + id )
 			.append( 'select' )
 			.on( 'change', function() {
+				current = +current;
 				current = $(this).val();
 				chart.update();
 			});
