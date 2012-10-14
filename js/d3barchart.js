@@ -6,10 +6,12 @@ var barChart = function() {
 	var chart,
 		id          = 'barChart',
 		dataFile    = null,
+		data        = null,
 		appendTo    = 'body',
 		orientation = 'horizontal',
 		valueCol    = 'values',
 		labelCol    = 'labels',
+		groupCol    = null,
 		labels      = [],
 		padding     = .1,
 		categories  = 5,
@@ -35,7 +37,7 @@ var barChart = function() {
 	 */
 	chart = function( g ) {
 		
-		var th = max = 0, labs, horiz = 'horizontal' == orientation;
+		var th = max = 0, labs, horiz = 'horizontal' == orientation, maxVal =  d3.max( g.data()[ 0 ], function( d ) { return d[ valueCol ]; } );
 		
 		// draw the title
 		if ( '' != title ) {
@@ -58,7 +60,7 @@ var barChart = function() {
 		axes.x.orient( 'bottom'  ).scale( horiz ? s.value : s.label );
 		axes.y.orient( 'left' ).scale( horiz ? s.label : s.value );
 		s.label.domain( labels );
-		s.value.domain( [ 0, d3.max( g.data()[ 0 ], function( d ) { return d[ valueCol ]; } ) ] );
+		s.value.domain( horiz ? [ 0, maxVal ] : [ 0, maxVal ] );
 		
 		// draw the axes
 		g.append( 'g' ).attr( 'transform', 'translate( 0, ' + height + ')' ).attr( 'class', 'xaxis' ).call( axes.x );
@@ -80,7 +82,7 @@ var barChart = function() {
 
 		// update the scales, axes, and domains
 		if ( 'horizontal' == orientation ) s.value.range( [ 0, width ] );
-		else s.value.range( [ height, 0 ] );
+		else s.value.range( horiz ? [ height, 0 ] : [ height, 0 ] );
 		s.label.rangeBands( [ 0, horiz ? height : width ], padding );
 		axes.x.scale( horiz ? s.value : s.label );
 		axes.y.scale( horiz ? s.label : s.value );
@@ -99,20 +101,27 @@ var barChart = function() {
 			var bar = g.selectAll( '#' + id + 'rect.bar' )
 				.data( d )
 				.enter().append( 'svg:rect' )
+				.attr( 'class', function( d, i ) { return 'q' + i + '-' + categories; } )
+				.attr( 'width',  horiz ? 0 : s.label.rangeBand() )
+				.attr( 'height', horiz ? s.label.rangeBand() : 0 )
 				.attr( 'x', horiz ? 0 : function( d ) { return s.label( d[ labelCol ] ); } )
-				.attr( 'y', horiz ? function( d ) { return s.label( d[ labelCol ] ); } : function( d ) { return s.value( d[ valueCol ] ); } )
+				.attr( 'y', horiz ? function( d ) { return s.label( d[ labelCol ] ); } : height )
+				.transition().duration( 1000 )
 				.attr( 'width',  horiz ? function( d ) { return s.value( d[ valueCol ] ); } : s.label.rangeBand() )
 				.attr( 'height', horiz ? s.label.rangeBand() : function( d ) { return height - s.value( d[ valueCol ] ); } )
-				.attr( 'class', function( d ) { return 'q' + d.index + '-' + categories; } );
+				.attr( 'y', horiz ? function( d ) { return s.label( d[ labelCol ] ); } : function( d ) { return s.value( d[ valueCol ] ); } );
 			g.selectAll( '#' + id + 'text.valueLabel' )
 				.data( d )
 				.enter().append( 'svg:text' )
+				.attr( 'opacity', 0 )
 				.attr( 'class', 'valueLabel' )
 				.attr( 'style', 'text-anchor:' + ( horiz ? 'end' : 'middle' ) + ';dominant-baseline:central;' )
 				.attr( 'x',  horiz ? function( d ) { return s.value( d[ valueCol ] ) - 6; } : function( d ) { return s.label( d[ labelCol ] ) + s.label.rangeBand() / 2; } )
 				.attr( 'y',  horiz ? function( d ) { return s.label( d[ labelCol ] ) + s.label.rangeBand() / 2; } : function( d ) { return s.value( d[ valueCol ] ); } )
-				.attr( 'dy', horiz ? 0 : '1.5em' )
-				.text( function( d ) { return d[ valueCol ]; } );
+				.attr( 'dy', horiz ? 0 : '1em' )
+				.text( function( d ) { return d[ valueCol ]; } )
+				.transition().delay( 1000 ).duration( 500 )
+				.attr( 'opacity', 1 );
 		});
 		
 		// redraw the axes
@@ -125,24 +134,34 @@ var barChart = function() {
 	 */
 	chart.load = function() {
 		if ( null != dataFile ) {
-			d3.csv( dataFile, function( data ) {
+			d3.csv( dataFile, function( rawData ) {
 
-				// loop through each row of the data
-				data.forEach( function( row, i ) {
-					// store the index
-					row.index = i;
-					// make sure the values are numeric
-					row[ valueCol ] = +row[ valueCol ];
-					// store the labels in an array
-					labels.push( row[ labelCol ] );
-				});
-
+				// check to see if we've got a single set of data or groups of columns
+				if ( null == groupCol ) {
+					// loop through each row of the data
+					rawData.forEach( function( row ) {
+						// make sure the values are numeric
+						row[ valueCol ] = +row[ valueCol ];
+						// store the labels in an array
+						labels.push( row[ labelCol ] );
+					});
+				} else {
+					var d = [];
+					rawData.forEach( function( row, i ) {
+						if ( ! d[ row[ groupCol ] ] ) d[ row[ groupCol ] ] = [ +row[ valueCol ] ];
+						else d[ row[ groupCol ] ].push( +row[ valueCol ] );
+						if ( ! labels[ row[ groupCol ] ] ) labels[ row[ groupCol ] ] = [ row[ labelCol ] ];
+						else labels[ row[ groupCol ] ].push( row[ labelCol ] ); 
+					});
+					rawData = d;
+				}
+				data = rawData;
 				// create the svg
 				d3.select( appendTo )
 					.append( 'div' )
 					.attr( 'id', id )
 					.selectAll( 'svg' )
-					.data( [ data ] )
+					.data( [ data.slice( 0, categories ) ] )
 					.enter().append( 'svg' )
 					.attr( 'width',  width  + margins.l + margins.r )
 					.attr( 'height', height + margins.t + margins.b )
@@ -150,6 +169,10 @@ var barChart = function() {
 					.append( 'g' )
 					.attr( 'transform', 'translate(' + margins.l + ',' + margins.t + ')' )
 					.call( chart );
+				d3.select( '#' + id )
+					.append( 'button' )
+					.text( 'Update' )
+					.on( 'click', chart.update );
 			});
 		}
 	};
@@ -235,6 +258,12 @@ var barChart = function() {
 		return chart;
 	};
 	
+	chart.groupCol = function( g ) {
+		if ( ! arguments.length ) return groupCol;
+		groupCol = g;
+		return chart;
+	};
+	
 	chart.labels = function( l ) {
 		if ( ! arguments.length ) return labels;
 		labels = l;
@@ -245,6 +274,14 @@ var barChart = function() {
 		if ( ! arguments.length ) return colorScheme;
 		colorScheme = c;
 		return chart;
+	};
+	
+	chart.update = function() {
+		var horiz = 'horizontal' == orientation;
+		d3.selectAll( '#' + id + ' svg g rect' )
+			.data( data.slice( categories ) )
+			.transition().duration( 1000 )
+			.attr( horiz ? 'width' : 'height', function( d ) { return s.value( d[ valueCol ] ); } );
 	};
 	
 	// finally, return the chart object

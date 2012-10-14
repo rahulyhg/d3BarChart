@@ -1,30 +1,32 @@
-/**
- * A demo of how to use the barchart class
- */
-
-// create our chart object
-var chart1 = barChart()
-			.id( 'chart1' )
-			.dataFile( 'js/data.csv' )
-			.appendTo( 'body' )				// element to which the chart should be added
-			.title( 'Hours Spent' )			// chart title
-			.valueCol( 'hours' )			// column name with values from which to make bars
-			.labelCol( 'person' )			// column name with values from which to make labels
-			.colorScheme( 'PiYG' )		// set the color scheme, see colorbrewer
-			.orientation( 'vertical' )
-			.width( 350 )
-			.padding( 0 )
-			.load(),
-			
-	chart2 = barChart()
-			.id( 'chart2' )
-			.dataFile( 'js/data.csv' )
-			.appendTo( 'body' )				// element to which the chart should be added
-			.title( 'Hours Spent' )			// chart title
-			.valueCol( 'hours' )			// column name with values from which to make bars
-			.labelCol( 'person' )			// column name with values from which to make labels
-			.colorScheme( 'RdYlBu' )		// set the color scheme, see colorbrewer
-			.orientation( 'horizontal' )
-			.width( 485 )
-			.height( 300 )
-			.load();
+jQuery( document ).ready( function ( $ ) {
+	var data1 = {
+			labels: [ 'Real Self', 'Ideal Self', 'Friends/Family', 'Peer Real', 'Peer Ideal' ],
+			series: [
+				{
+					title: 'I am a person who is sensitive to the emotions of others.',
+					values: [ 4, 5, 3, 4.8, 5.4 ]
+				},
+				{
+					title: 'I am a person who finds it important to keep bills and payments current.',
+					values: [ 2, 4, 6, 1.7, 4.9 ]
+				},
+				{
+					title: 'I am a person who prefers to be with other people rather than spending time alone.',
+					values: [ 4, 5, 3, 4.8, 5.4 ]
+				},
+				{
+					title: 'I am a person who is careful to get the amount of sleep I need most nights.',
+					values: [ 4, 5, 3, 4.8, 5.4 ]
+				},
+				{
+					title: 'I am a person who believes that having a lot of money will make me happy.',
+					values: [ 4, 5, 3, 4.8, 5.4 ]
+				}
+			]
+		},
+		chart1 = hbarChart()
+				.id( 'sustainablePersonality' )
+				.data( data1 )
+				.width( 420 )
+				.height( 280 )();
+});

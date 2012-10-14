@@ -70,11 +70,28 @@ a.chartNav:active {
 a.prev { left:  35px; }
 a.next { right: 35px; }
 
-#sustainablePersonality select {
+span.ui-combobox {
 	position: absolute;
-	top: 11px;
-	left: 76px;
-	width: 350px;
+	top: -2px;
+	left: 80px;
+	width: auto;
+}
+input.ui-combobox-input {
+	width: 299px;
+	height: 24px;
+	display: inline-block;
+	font-size: .9em;
+	background-color: #fff !important;
+}
+a.ui-combobox-toggle {
+	height: 26px;
+	display: inline-block;
+	top: 9px;
+}
+
+ul.ui-widget-content li.ui-menu-item a {
+	text-align: left;
+	font-size: .9em;
 }
 
 /*
