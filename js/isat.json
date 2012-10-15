@@ -1,0 +1,18 @@
+[
+	{
+		"name": "The Foundation",
+		"children": [
+			{
+				"name": "The Social Context",
+				"children": [
+					{
+						"name": "ISAT 131: Technology, Science & Society", "color": "#f9f0ab"
+					},
+					{
+						"name": "ISAT 231: Political Economy of Technology and Science", "color": "#e8e596"
+					}
+				]
+			}
+		]
+	}
+]

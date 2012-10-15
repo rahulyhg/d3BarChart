@@ -6,6 +6,9 @@ var hbarChart = function () {
 		max,
 		setTitle,
 		positionLabel,
+		xAxisFormat,
+		movePrev,
+		moveNext,
 		id = 'hbarChart',
 		dataFile = null,
 		data = null,
@@ -15,7 +18,8 @@ var hbarChart = function () {
 		padding = 0.1,
 		categories = 5,
 		colorScheme = 'OrRd',
-		margins = { t: 20, r: 25, b: 20, l: 20 },
+		margins = { t: 20, r: 25, b: 10, l: 20 },
+		lm = bm = tm = 0,
 		width = 500,
 		height = 309,
 		cwidth = width  - margins.l - margins.r,
@@ -34,8 +38,6 @@ var hbarChart = function () {
 	 * Chart initialization
 	 */
 	chart = function () {
-		var tm, lm, bm;
-
 		// set the max value for the value scale
 		max = -Infinity;
 		data.series.forEach(function (s) {
@@ -43,10 +45,14 @@ var hbarChart = function () {
 			max = (tempMax > max) ? tempMax : max;
 		});
 		categories = data.labels.length;
+
 		// set the domains
 		s.label.domain(data.labels);
 		s.value.domain([0, max]);
 		s.color.domain([1, categories]).range(d3.range(categories));
+
+		// set the x axis formatter
+		format = xAxisFormat;
 
 		// create the svg object
 		svg = d3.select(appendTo).append('div')
@@ -62,12 +68,14 @@ var hbarChart = function () {
 		tm = margins.t + svg.select('g.title').node().getBBox().height;
 
 		// draw the axes
+		axes.x.tickFormat( format ).ticks( max ).tickSize( 0, 0 );
 		svg.append('g').attr('class', 'xaxis').call(axes.x);
 		svg.append('g').attr('class', 'yaxis').call(axes.y);
+		svg.selectAll( '.xaxis text' ).attr( 'style', 'text-anchor:end' ).attr( 'transform', 'rotate(335)' );
 
 		// adjust the margins to account for axes
 		lm = margins.l + svg.select('g.yaxis').node().getBBox().width;
-		bm = margins.b + svg.select('g.xaxis text').node().getBBox().height;
+		bm = margins.b + svg.select('g.xaxis').node().getBBox().height;
 
 		// adjust chart width and height to account for margins
 		cwidth = width  - lm - margins.r;
@@ -82,7 +90,7 @@ var hbarChart = function () {
 		s.label.rangeBands([0, cheight], padding);
 
 		// redraw the axes for the adjusted ranges
-		axes.x.tickFormat(d3.format(format)).ticks(max).tickSize(-cheight, 0);
+		axes.x.tickSize( -cheight, 0) ;
 		svg.select('g.xaxis').call(axes.x);
 		svg.select('g.yaxis').call(axes.y);
 
@@ -113,34 +121,17 @@ var hbarChart = function () {
 			.attr('opacity', 1);
 
 		// add navigation
-		d3.select('#' + id)
-			.append('a')
-			.attr('class', 'chartNav prev')
-			.text('<<')
-			.on('click', function () {
-				if ( +current !== 0 ) {
-					current = +current;
-					current -= 1;
-					chart.update();
-					$( '#' + id + ' select' ).val( current );
-				}
-				return false;
-			});
-		d3.select('#' + id)
-			.append('a')
-			.attr('class', 'chartNav next')
-			.text('>>')
-			.on('click', function () {
-				if ( +current !== data.series.length - 1 ) {
-					current = +current;
-					current += 1;
-					chart.update();
-					$( '#' + id + ' select' ).val( current );
-				}
-				return false;
-			});
+		d3.select( window ).on( 'keydown', function() {
+			switch ( d3.event.keyCode ) {
+				case 37: movePrev(); break;
+				case 39: moveNext(); break;
+			}
+		});
+		d3.select('#' + id).append('a').attr('class', 'chartNav prev').text('<<').on('click', movePrev );
+		d3.select('#' + id).append('a').attr('class', 'chartNav next').text('>>').on('click', moveNext );
 		d3.select( '#' + id )
 			.append( 'select' )
+			.attr( 'style', 'width:' + ( width - 70 ) + 'px;' )
 			.on( 'change', function() {
 				current = +current;
 				current = $(this).val();
@@ -152,6 +143,26 @@ var hbarChart = function () {
 				.attr( 'value', i )
 				.text( data.series[ i ].title );
 		}
+	};
+
+	moveNext = function() {
+		if ( +current !== data.series.length - 1 ) {
+			current = +current;
+			current += 1;
+			chart.update();
+			$( '#' + id + ' select' ).val( current );
+		}
+		return false;
+	};
+	
+	movePrev = function() {
+		if ( +current !== 0 ) {
+			current = +current;
+			current -= 1;
+			chart.update();
+			$( '#' + id + ' select' ).val( current );
+		}
+		return false;
 	};
 
 	positionLabel = function (d, i) {
@@ -166,6 +177,11 @@ var hbarChart = function () {
 			pos = s.value(d) - 6;
 		}
 		return pos;
+	};
+
+	xAxisFormat = function( d ) {
+		var formats = [ 'Strongly Disagree', 'Disagree', 'Somewhat Disagree', 'Neither Agree nor Disagree', 'Somewhat Agree', 'Agree', 'Strongly Agree' ];
+		return formats[ ~~d ];
 	};
 
 	/**
@@ -256,31 +272,40 @@ var hbarChart = function () {
 	};
 
 	chart.update = function () {
-		var lm, tm, bm;
-		setTitle(data.series[current].title);
-		lm = margins.l + svg.select('g.yaxis').node().getBBox().width;
-		tm = margins.t + svg.select('g.title').node().getBBox().height;
-		bm = margins.b + svg.select('g.xaxis text').node().getBBox().height;
+		// set the title
+		setTitle( data.series[ current ].title );
+		
+		// get the height of the new title
+		tm = margins.t + svg.select( 'g.title' ).node().getBBox().height;
+		
+		// calculate the chart height
 		cheight = height - tm - bm;
-		svg.select('g.yaxis').transition().duration(500).attr('transform', 'translate(' + lm + ',' + tm + ')');
-		s.label.rangeBands([0, cheight], padding);
-		axes.x.tickFormat(d3.format(format)).ticks(max).tickSize(-cheight, 0);
-		svg.select('g.xaxis').call(axes.x);
-		svg.select('g.yaxis').call(axes.y);
-		svg.select('g.bars').transition().duration(500).attr('transform', 'translate(' + lm + ',' + tm + ')');
-		svg.selectAll('g.bars text')
-			.data(data.series[current].values)
-			.transition().duration(500)
-			.text(function (d) { return d; })
-			.attr('y', function (d, i) { return s.label(data.labels[i]) + s.label.rangeBand() / 2; })
-			.attr('x', positionLabel);
-
-		svg.selectAll('g.bars rect')
-			.data(data.series[current].values)
-			.transition().duration(500)
-			.attr('width', function (d) { return s.value(d); })
-			.attr('height', s.label.rangeBand())
-			.attr('y', function (d, i) { return s.label(data.labels[i]); });
+		
+		// move the y axis into place
+		svg.select( 'g.yaxis' ).transition().duration( 500 ).attr( 'transform', 'translate(' + lm + ',' + tm + ')' );
+		
+		// set the bar heights
+		s.label.rangeBands( [ 0, cheight ], padding );
+		
+		// redraw the y axis
+		svg.select( 'g.yaxis' ).call( axes.y );
+		
+		// move the chart into place
+		svg.select( 'g.bars' ).transition().duration( 500 ).attr( 'transform', 'translate(' + lm + ',' + tm + ')' );
+		
+		// set the new data and redraw the new bars and their numeric labels
+		svg.selectAll( 'g.bars text' )
+			.data( data.series[ current ].values )
+			.transition().duration( 500 )
+			.text( function ( d ) { return d; } )
+			.attr( 'y', function ( d, i ) { return s.label( data.labels[ i ] ) + s.label.rangeBand() / 2; } )
+			.attr( 'x', positionLabel );
+		svg.selectAll( 'g.bars rect' )
+			.data( data.series[ current ].values )
+			.transition().duration( 500 )
+			.attr( 'width', function ( d ) { return s.value( d ); } )
+			.attr( 'height', s.label.rangeBand())
+			.attr( 'y', function ( d, i ) { return s.label( data.labels[ i ] ); } );
 	};
 
 	setTitle = function (title) {

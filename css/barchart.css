@@ -38,12 +38,11 @@ text {
 }
 
 g.title text {
-	font-family: Calibri;
+	font-family: "Gill Sans",Calibri;
 	font-size: 14pt;
-	font-weight: bold;
 }
 text.valueLabel {
-	font-family: Calibri;
+	font-family:  Calibri;
 	font-size: 10pt;
 	font-weight: bold;
 }
